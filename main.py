@@ -31,7 +31,7 @@ def get_email_config():
         "smtp_server": "smtp.gmail.com",
         "smtp_port": 587,
         "username": "touheedfarid@gmail.com",
-        "password": "huzaifa123",  # plain password as requested
+        "password": "bztk umfx dart zdmd",  # plain password as requested
         "from_addr": "touheedfarid@gmail.com",
         "to_addrs": ["huzaifawaseem578@gmail.com"]
     }
