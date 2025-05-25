@@ -134,7 +134,7 @@ def update_adjusted_times():
     print(f"Storing {len(adjusted)} adjusted times.")
     requests.put(f"{get_firebase_config()['databaseURL']}/uniqueTimes.json", json.dumps(adjusted))
     try:
-        requests.get("https://your-app-name.onrender.com/")
+        requests.get("https://rcdc-backends.onrender.com")
     except:
         pass
 
