@@ -8,6 +8,15 @@ import pytz
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import threading
+from flask import Flask
+
+# Flask app for port binding (Render requirement)
+app = Flask(__name__)
+
+@app.route("/healthz")
+def health():
+    return "OK", 200
 
 # Hardcoded Firebase client config
 def get_firebase_config():
@@ -22,7 +31,7 @@ def get_email_config():
         "smtp_server": "smtp.gmail.com",
         "smtp_port": 587,
         "username": "touheedfarid@gmail.com",
-        "password": "bztk umfx dart zdmd",  # plain password as requested
+        "password": "huzaifa123",  # plain password as requested
         "from_addr": "touheedfarid@gmail.com",
         "to_addrs": ["huzaifawaseem578@gmail.com"]
     }
@@ -59,35 +68,27 @@ def shift_time(time_str, minutes):
 
 # Generate HTML table for email report with rounded corners and styled header
 def build_html_table(matches):
-    # Hex color mapping
     ibc_colors = {
-        "JOHAR 1": "#90EE90",  # lightgreen
-        "JOHAR 2": "#ADD8E6",  # lightblue
-        "GADAP": "#FFFFE0"     # lightyellow
+        "JOHAR 1": "#90EE90",
+        "JOHAR 2": "#ADD8E6",
+        "GADAP": "#FFFFE0"
     }
     table_style = (
-        "border-collapse: separate;"
-        "border-spacing: 0;"
-        "border-radius: 8px;"
-        "overflow: hidden;"
+        "border-collapse: separate; border-spacing: 0; border-radius: 8px; overflow: hidden;"
     )
     header_style = (
-        "background-color: #fa9522;"
-        "color: #FFFFFF;"
+        "background-color: #FFA500; color: #FFFFFF;"
     )
     html = [
         "<html><body>",
         "<h2>Feeder Event Report</h2>",
         f"<table style='{table_style}' border='1' cellpadding='5' cellspacing='0'>",
-        (
-            "<tr style='" + header_style + "'>"
-            "<th>Name</th><th>Event</th><th>Duration</th><th>Type</th>"
-            "<th>OFF Time</th><th>ON Time</th><th>IBC</th><th>Grid</th><th>Hold Reason</th></tr>"
-        )
+        ("<tr style='" + header_style + "'>"
+         "<th>Name</th><th>Event</th><th>Duration</th><th>Type</th>"
+         "<th>OFF Time</th><th>ON Time</th><th>IBC</th><th>Grid</th><th>Hold Reason</th></tr>")
     ]
     for rec_id, rec, event in matches:
-        # Determine row color: red for HOLD (#FF0000), otherwise by IBC
-        color = "#FF0000" if event == 'HOLD' else ibc_colors.get(rec.get('IBC'), "#000000")
+        color = "#FF0000" if event == 'HOLD' else ibc_colors.get(rec.get('IBC'), "#FFFFFF")
         html.append(f"<tr style='background-color:{color};'>")
         html.append(f"<td>{rec.get('feederName')}</td>")
         html.append(f"<td>{event}</td>")
@@ -152,20 +153,20 @@ def watch_times():
         else:
             print("No feeders matched target time.")
 
+# Scheduler setup
+scheduler = sched.scheduler(time.time, time.sleep)
+
+def start_updater():
+    update_adjusted_times()
+    scheduler.enter(300, 1, start_updater)
+
+def start_watcher():
+    watch_times()
+    scheduler.enter(30, 2, start_watcher)
+
 if __name__ == '__main__':
-    scheduler = sched.scheduler(time.time, time.sleep)
-    scheduler.enter(0,1,update_adjusted_times)
-    def upd():
-        update_adjusted_times()
-        scheduler.enter(300,1,upd)
-    scheduler.enter(300,1,upd)
-    scheduler.enter(0,2,watch_times)
-    def wch():
-        watch_times()
-        scheduler.enter(30,2,wch)
-    scheduler.enter(30,2,wch)
     print("Scheduler started: updater every 5min, watcher every 30s.")
-    try:
-        scheduler.run()
-    except (KeyboardInterrupt, SystemExit):
-        print("Scheduler stopped.")
+    scheduler.enter(0, 1, start_updater)
+    scheduler.enter(0, 2, start_watcher)
+    threading.Thread(target=scheduler.run, daemon=True).start()
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
