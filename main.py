@@ -133,6 +133,10 @@ def update_adjusted_times():
     adjusted = [shift_time(t, -6) for t in sorted(unique)]
     print(f"Storing {len(adjusted)} adjusted times.")
     requests.put(f"{get_firebase_config()['databaseURL']}/uniqueTimes.json", json.dumps(adjusted))
+    try:
+        requests.get("https://your-app-name.onrender.com/")
+    except:
+        pass
 
 # Watcher: every 30s, match current time, notify via email
 def watch_times():
