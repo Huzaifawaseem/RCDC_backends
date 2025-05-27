@@ -30,9 +30,9 @@ def get_smtp_config():
     return {
         "smtp_server": "smtp.gmail.com",
         "smtp_port": 587,
-        "username": "touheedfarid@gmail.com",
-        "password": "bztk umfx dart zdmd",  # plain password as requested
-        "from_addr": "touheedfarid@gmail.com"
+        "username": "rcdcalert@gmail.com",
+        "password": "wkck ulaj lytt txsa",  # plain password as requested
+        "from_addr": "rcdcalert@gmail.com"
     }
 
 # Fetch active email addresses from Firebase
@@ -94,7 +94,7 @@ def build_html_table(matches):
     )
     html = [
         "<html><body>",
-        "<h2>Feeder Event Report</h2>",
+        "<h2>RCDC Feeders Event Alert!</h2>",
         f"<table style='{table_style}' border='1' cellpadding='5' cellspacing='0'>",
         ("<tr style='" + header_style + "'>"
          "<th>Name</th><th>Event</th><th>Duration</th><th>Type</th>"
@@ -125,7 +125,7 @@ def send_email(html_content):
         return
 
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = 'Instant Feeder Event Notification'
+    msg['Subject'] = 'RCDC Feeder Event Notification'
     msg['From'] = smtp_cfg['from_addr']
     msg['To'] = ', '.join(recipients)
     msg.attach(MIMEText(html_content, 'html'))
@@ -186,7 +186,7 @@ def start_updater():
 
 def start_watcher():
     watch_times()
-    scheduler.enter(30, 2, start_watcher)
+    scheduler.enter(60, 2, start_watcher)
 
 if __name__ == '__main__':
     print("Scheduler started: updater every 5min, watcher every 30s.")
