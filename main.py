@@ -25,16 +25,29 @@ def get_firebase_config():
         "databaseURL": "https://rcdclist-dea80-default-rtdb.firebaseio.com"
     }
 
-# Email credentials and recipients
-def get_email_config():
+# Email SMTP credentials (static)
+def get_smtp_config():
     return {
         "smtp_server": "smtp.gmail.com",
         "smtp_port": 587,
         "username": "touheedfarid@gmail.com",
         "password": "bztk umfx dart zdmd",  # plain password as requested
-        "from_addr": "touheedfarid@gmail.com",
-        "to_addrs": ["huzaifawaseem578@gmail.com"]
+        "from_addr": "touheedfarid@gmail.com"
     }
+
+# Fetch active email addresses from Firebase
+def fetch_mail_addresses():
+    db_url = get_firebase_config()["databaseURL"]
+    url = f"{db_url}/mails.json"
+    try:
+        resp = requests.get(url)
+        resp.raise_for_status()
+        data = resp.json() or {}
+        # Collect only active addresses
+        return [rec.get("address") for rec in data.values() if rec.get("active")]
+    except requests.RequestException as e:
+        print(f"Error fetching mail addresses: {e}")
+        return []
 
 # Fetch feeder records via REST API
 def fetch_feeder_data():
@@ -71,7 +84,7 @@ def build_html_table(matches):
     ibc_colors = {
         "JOHAR 1": "#90EE90",
         "JOHAR 2": "#ADD8E6",
-        "GADAP": "#FFFFE0"
+        "GADAP":   "#FFFFE0"
     }
     table_style = (
         "border-collapse: separate; border-spacing: 0; border-radius: 8px; overflow: hidden;"
@@ -103,20 +116,26 @@ def build_html_table(matches):
     html.append("</table></body></html>")
     return '\n'.join(html)
 
-# Send email with HTML content
+# Send email with HTML content to all active recipients
 def send_email(html_content):
-    cfg = get_email_config()
+    smtp_cfg = get_smtp_config()
+    recipients = fetch_mail_addresses()
+    if not recipients:
+        print("No active email addresses found. Skipping send.")
+        return
+
     msg = MIMEMultipart('alternative')
     msg['Subject'] = 'Instant Feeder Event Notification'
-    msg['From'] = cfg['from_addr']
-    msg['To'] = ', '.join(cfg['to_addrs'])
+    msg['From'] = smtp_cfg['from_addr']
+    msg['To'] = ', '.join(recipients)
     msg.attach(MIMEText(html_content, 'html'))
+
     try:
-        with smtplib.SMTP(cfg['smtp_server'], cfg['smtp_port']) as server:
+        with smtplib.SMTP(smtp_cfg['smtp_server'], smtp_cfg['smtp_port']) as server:
             server.starttls()
-            server.login(cfg['username'], cfg['password'])
-            server.sendmail(cfg['from_addr'], cfg['to_addrs'], msg.as_string())
-        print("Email sent successfully.")
+            server.login(smtp_cfg['username'], smtp_cfg['password'])
+            server.sendmail(smtp_cfg['from_addr'], recipients, msg.as_string())
+        print(f"Email sent successfully to: {', '.join(recipients)}")
     except Exception as e:
         print(f"Error sending email: {e}")
 
@@ -134,6 +153,7 @@ def update_adjusted_times():
     print(f"Storing {len(adjusted)} adjusted times.")
     requests.put(f"{get_firebase_config()['databaseURL']}/uniqueTimes.json", json.dumps(adjusted))
     try:
+        # Ping own service to keep awake
         requests.get("https://rcdc-backends.onrender.com")
     except:
         pass
